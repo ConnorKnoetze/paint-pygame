@@ -17,6 +17,7 @@ class Toolbar():
     def __init__(self):
         self.swapped = False
         self.rect = py.Rect(1000, 0, 50, 1000)
+        self.tool_index = 0
 
         gap = 41
         size = 32
@@ -49,12 +50,13 @@ class Toolbar():
         rects = self.get_rects()
         for i in range(len(rects)):
             rect = rects[i]
-            if rect.collidepoint(mouse_pos) and not True in tool_selected:
+            if rect.collidepoint(mouse_pos):
+                if self.tool_index != None and self.tool_index != i:
+                    self.swap(self.tool_index)
+                    tool_selected[self.tool_index] = False
                 self.swap(i)
-                tool_selected[i] = True
-            elif rect.collidepoint(mouse_pos) and tool_selected[i]:
-                self.swap(i)
-                tool_selected[i] = False
+                tool_selected[i] = not tool_selected[i]
+                self.tool_index = i
 
 
 class Canvas:
@@ -86,8 +88,8 @@ class Canvas:
         x1,y1 = points[0]
         x2,y2 = points[1]
 
-        x_span = abs(x2 - x1)
-        y_span = abs(y2 - y1)
+        dx = abs(x2 - x1)
+        dy = abs(y2 - y1)
 
         mid_x = abs(x2 - x1) // 2 + min(x1, x2)
         mid_y = abs(y2 - y1) // 2 + min(y1, y2)
@@ -95,7 +97,7 @@ class Canvas:
         smajor = max(abs(x2 - x1), abs(y2 - y1)) //2
         sminor = min(abs(x2 - x1), abs(y2 - y1)) //2
 
-        if min(x_span, y_span) == y_span:
+        if min(dx, dy) == dy:
             for t in range(0, int(2*math.pi * 100),1):
                 self.draw_brush(mid_x + smajor * math.cos(t), mid_y + sminor * math.sin(t))
         else:
