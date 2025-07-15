@@ -153,6 +153,16 @@ while running:
             toolbar.update(mouse_pos)
             if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and (tool_selected[1] or tool_selected[2] or tool_selected[3]):
                 point_buffer.append(mouse_pos)
+            elif 1000 <= mouse_pos[0] < 1050 and 0 <= mouse_pos[1] < 1000:
+                if tool_selected[4]:
+                    display.canvas.brush_color = (0,0,0)
+                elif tool_selected[5]:
+                    display.canvas.brush_color = (0,0,255)
+                elif tool_selected[6]:
+                    display.canvas.brush_color = (0,255,0)
+                elif tool_selected[7]:
+                    display.canvas.brush_color = (255,0,0)
+                    
         elif event.type == py.MOUSEBUTTONUP:
             pressed = False
             mouse_pos = py.mouse.get_pos()
