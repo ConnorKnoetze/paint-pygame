@@ -28,7 +28,7 @@ class Toolbar():
         self.swap(0)
     
     def draw(self):
-        py.draw.rect(screen, (50,50,50), self.rect)
+        py.draw.rect(screen, (100,100,100), self.rect)
         [screen.blit(self.images[i], self.assets_rects[i]) for i in range(len(self.assets_rects))]
 
     def get_rect(self):
@@ -54,9 +54,16 @@ class Toolbar():
                 if self.tool_index != None and self.tool_index != i:
                     self.swap(self.tool_index)
                     tool_selected[self.tool_index] = False
-                self.swap(i)
-                tool_selected[i] = not tool_selected[i]
-                self.tool_index = i
+                    self.tool_index = None
+                elif self.tool_index == i:
+                    print(True)
+                    self.swap(i)
+                    tool_selected[i] = not tool_selected[i]
+                    self.tool_index = None
+                else:    
+                    self.swap(i)
+                    tool_selected[i] = not tool_selected[i]
+                    self.tool_index = i
 
 
 class Canvas:
@@ -66,7 +73,7 @@ class Canvas:
         self.brush_color = (0, 0, 0)
 
     def draw_brush(self, x, y, size=5):
-        py.draw.circle(self.surface, self.brush_color, (x, y), size)  # Draw a brush stroke
+        py.draw.circle(self.surface, self.brush_color, (x, y), size)
 
     def draw_square(self, points):
         x1,y1 = points[0]
@@ -128,7 +135,13 @@ class Canvas:
                 y1 += sy
 
     def render(self, screen):
-        screen.blit(self.surface, (0, 0))  # Blit the canvas onto the main screen
+        screen.blit(self.surface, (0, 0))
+    
+    def to_bytes(self):
+        return py.image.tobytes(self.surface, "RGBA")
+    
+    def from_bytes(self, byte_string, size=(1000,1000)):
+        return py.image.frombytes(byte_string, size, "RGBA")
 
 
 class Display():
@@ -142,6 +155,11 @@ class Display():
     def update(self, mouse_pos):
         if tool_selected[0] and 0<= mouse_pos[0] < self.size and 0<= mouse_pos[1] < self.size:
             self.canvas.draw_brush(mouse_pos[0], mouse_pos[1], size=5)
+    
+    def convert(self):
+        print(self.canvas.to_bytes())
+        byte = self.canvas.to_bytes()
+        print(self.canvas.from_bytes(byte))
 
 display = Display()
 toolbar = Toolbar()
@@ -158,10 +176,11 @@ while running:
         elif event.type == py.MOUSEBUTTONDOWN:
             mouse_pos = py.mouse.get_pos()
             pressed = True
-            toolbar.update(mouse_pos)
             if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and (tool_selected[1] or tool_selected[2] or tool_selected[3]):
+                print(mouse_pos)
                 point_buffer.append(mouse_pos)
             elif 1000 <= mouse_pos[0] < 1050 and 0 <= mouse_pos[1] < 1000:
+                toolbar.update(mouse_pos)
                 if tool_selected[4]:
                     display.canvas.brush_color = (0,0,0)
                 elif tool_selected[5]:
@@ -174,7 +193,7 @@ while running:
         elif event.type == py.MOUSEBUTTONUP:
             pressed = False
             mouse_pos = py.mouse.get_pos()
-            if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000:
+            if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and len(point_buffer) > 0:
                 point_buffer.append(mouse_pos)
                 if tool_selected[1]:
                     display.canvas.draw_circle(point_buffer)
