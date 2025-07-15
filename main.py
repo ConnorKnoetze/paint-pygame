@@ -80,20 +80,23 @@ class Canvas:
 
         
     def draw_circle(self, points):
-        x_span = max(points[0][0], points[1][0]) - min(points[0][0], points[1][0])
-        y_span = max(points[0][1], points[1][1]) - min(points[0][1], points[1][1])
+        x1,y1 = points[0]
+        x2,y2 = points[1]
 
-        mid_x = (max(points[0][0], points[1][0]) - min(points[0][0], points[1][0])) // 2 + min(points[0][0], points[1][0])
-        mid_y = (max(points[0][1], points[1][1]) - min(points[0][1], points[1][1])) // 2 + min(points[0][1], points[1][1])
+        x_span = abs(x2 - x1)
+        y_span = abs(y2 - y1)
+
+        mid_x = abs(x2 - x1) // 2 + min(x1, x2)
+        mid_y = abs(y2 - y1) // 2 + min(y1, y2)
         
-        smajor = max(max(points[0][0], points[1][0]) - min(points[0][0], points[1][0]), max(points[0][1], points[1][1]) - min(points[0][1], points[1][1])) //2
-        sminor = min(max(points[0][0], points[1][0]) - min(points[0][0], points[1][0]), max(points[0][1], points[1][1]) - min(points[0][1], points[1][1])) //2
+        smajor = max(abs(x2 - x1), abs(y2 - y1)) //2
+        sminor = min(abs(x2 - x1), abs(y2 - y1)) //2
 
         if min(x_span, y_span) == y_span:
             for t in range(0, int(2*math.pi * 100),1):
                 self.draw_brush(mid_x + smajor * math.cos(t), mid_y + sminor * math.sin(t))
         else:
-            for t in range(0, int(2*math.pi * 1000000),10000):
+            for t in range(0, int(2*math.pi * 100),1):
                 self.draw_brush(mid_x + sminor * math.cos(t), mid_y + smajor * math.sin(t))
 
     def draw_line(self, points):
