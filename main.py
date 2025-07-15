@@ -67,16 +67,19 @@ class Canvas:
         py.draw.circle(self.surface, self.brush_color, (x, y), size)  # Draw a brush stroke
 
     def draw_square(self, points):
-        min_x, max_x = min(points[0][0], points[1][0]), max(points[0][0], points[1][0])
-        min_y, max_y = min(points[0][1], points[1][1]), max(points[0][1], points[1][1])
+        x1,y1 = points[0]
+        x2,y2 = points[1]
+
+        min_x, max_x = min(x1, x2), max(x1, x2)
+        min_y, max_y = min(y1, y2), max(y1, y2)
         
         for x in range(min_x, max_x, 1):
-            self.draw_brush(x, points[0][1])
-            self.draw_brush(x, points[1][1])
+            self.draw_brush(x, y1)
+            self.draw_brush(x, y2)
 
         for y in range(min_y, max_y, 1):
-            self.draw_brush(points[0][0], y)
-            self.draw_brush(points[1][0], y)
+            self.draw_brush(x1, y)
+            self.draw_brush(x2, y)
 
         
     def draw_circle(self, points):
