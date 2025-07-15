@@ -1,6 +1,7 @@
 import pygame as py
 import os
 import threading
+import math
 
 py.init()
 screen = py.display.set_mode((1050,1000))
@@ -65,6 +66,58 @@ class Canvas:
     def draw_brush(self, x, y, size=5):
         py.draw.circle(self.surface, self.brush_color, (x, y), size)  # Draw a brush stroke
 
+    def draw_square(self, points):
+        min_x, max_x = min(points[0][0], points[1][0]), max(points[0][0], points[1][0])
+        min_y, max_y = min(points[0][1], points[1][1]), max(points[0][1], points[1][1])
+        
+        for x in range(min_x, max_x, 1):
+            self.draw_brush(x, points[0][1])
+            self.draw_brush(x, points[1][1])
+
+        for y in range(min_y, max_y, 1):
+            self.draw_brush(points[0][0], y)
+            self.draw_brush(points[1][0], y)
+
+        
+    def draw_circle(self, points):
+        x_span = max(points[0][0], points[1][0]) - min(points[0][0], points[1][0])
+        y_span = max(points[0][1], points[1][1]) - min(points[0][1], points[1][1])
+
+        mid_x = (max(points[0][0], points[1][0]) - min(points[0][0], points[1][0])) // 2 + min(points[0][0], points[1][0])
+        mid_y = (max(points[0][1], points[1][1]) - min(points[0][1], points[1][1])) // 2 + min(points[0][1], points[1][1])
+        
+        smajor = max(max(points[0][0], points[1][0]) - min(points[0][0], points[1][0]), max(points[0][1], points[1][1]) - min(points[0][1], points[1][1])) //2
+        sminor = min(max(points[0][0], points[1][0]) - min(points[0][0], points[1][0]), max(points[0][1], points[1][1]) - min(points[0][1], points[1][1])) //2
+
+        if min(x_span, y_span) == y_span:
+            for t in range(0, int(2*math.pi * 100),1):
+                self.draw_brush(mid_x + smajor * math.cos(t), mid_y + sminor * math.sin(t))
+        else:
+            for t in range(0, int(2*math.pi * 1000000),10000):
+                self.draw_brush(mid_x + sminor * math.cos(t), mid_y + smajor * math.sin(t))
+
+    def draw_line(self, points):
+        # Bresenham's Line Algorithm
+        x1, y1 = points[0]
+        x2, y2 = points[1]
+
+        dx = abs(x2 - x1)
+        dy = abs(y2 - y1)
+        sx = 1 if x1 < x2 else -1
+        sy = 1 if y1 < y2 else -1
+        err = dx - dy
+
+        while True:
+            self.draw_brush(x1, y1)
+            if x1 == x2 and y1 == y2:
+                break
+            e2 = err * 2
+            if e2 > -dy:
+                err -= dy
+                x1 += sx
+            if e2 < dx:
+                err += dx
+                y1 += sy
 
     def render(self, screen):
         screen.blit(self.surface, (0, 0))  # Blit the canvas onto the main screen
@@ -87,6 +140,7 @@ toolbar = Toolbar()
 tool_selected = [True]+[False for _ in assets_on][:-1]
 running = True
 pressed = False
+point_buffer = []
 
 while running:
     screen.fill((0,0,0))
@@ -97,8 +151,23 @@ while running:
             mouse_pos = py.mouse.get_pos()
             pressed = True
             toolbar.update(mouse_pos)
+            if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and (tool_selected[1] or tool_selected[2] or tool_selected[3]):
+                point_buffer.append(mouse_pos)
         elif event.type == py.MOUSEBUTTONUP:
             pressed = False
+            mouse_pos = py.mouse.get_pos()
+            if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000:
+                point_buffer.append(mouse_pos)
+                if tool_selected[1]:
+                    display.canvas.draw_circle(point_buffer)
+                elif tool_selected[2]:
+                    display.canvas.draw_line(point_buffer)
+                elif tool_selected[3]:
+                    display.canvas.draw_square(point_buffer)
+                point_buffer = []
+            else:
+                point_buffer = []
+
     if pressed:
         mouse_pos = py.mouse.get_pos()
         display.update(mouse_pos)
@@ -108,3 +177,5 @@ while running:
 
     clock.tick(500)
     py.display.flip()
+
+py.quit()
