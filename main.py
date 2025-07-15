@@ -56,7 +56,6 @@ class Toolbar():
                     tool_selected[self.tool_index] = False
                     self.tool_index = None
                 elif self.tool_index == i:
-                    print(True)
                     self.swap(i)
                     tool_selected[i] = not tool_selected[i]
                     self.tool_index = None
@@ -177,7 +176,6 @@ while running:
             mouse_pos = py.mouse.get_pos()
             pressed = True
             if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and (tool_selected[1] or tool_selected[2] or tool_selected[3]):
-                print(mouse_pos)
                 point_buffer.append(mouse_pos)
             elif 1000 <= mouse_pos[0] < 1050 and 0 <= mouse_pos[1] < 1000:
                 toolbar.update(mouse_pos)
