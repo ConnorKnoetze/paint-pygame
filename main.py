@@ -1,6 +1,5 @@
 import pygame as py
 import os
-import threading
 import math
 
 py.init()
@@ -12,6 +11,7 @@ assets_dir_off = os.path.join(base_dir, "assets", "off")
 assets_dir_on = os.path.join(base_dir, "assets", "on")
 assets_on = [os.path.join(assets_dir_on, file) for file in os.listdir(assets_dir_on)]
 assets_off = [os.path.join(assets_dir_off, file) for file in os.listdir(assets_dir_off)]
+tool_selected = [True]+[False for _ in assets_on][:-1]
 
 class Toolbar():
     def __init__(self):
@@ -160,57 +160,60 @@ class Display():
         byte = self.canvas.to_bytes()
         print(self.canvas.from_bytes(byte))
 
-display = Display()
-toolbar = Toolbar()
-tool_selected = [True]+[False for _ in assets_on][:-1]
-running = True
-pressed = False
-point_buffer = []
+def main():
+    display = Display()
+    toolbar = Toolbar()
+    running = True
+    pressed = False
+    point_buffer = []
 
-while running:
-    screen.fill((0,0,0))
-    for event in py.event.get():
-        if event.type == py.QUIT:
-            running = False
-        elif event.type == py.MOUSEBUTTONDOWN:
+    while running:
+        screen.fill((0,0,0))
+        for event in py.event.get():
+            if event.type == py.QUIT:
+                running = False
+            elif event.type == py.MOUSEBUTTONDOWN:
+                mouse_pos = py.mouse.get_pos()
+                pressed = True
+                if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and (tool_selected[1] or tool_selected[2] or tool_selected[3]):
+                    point_buffer.append(mouse_pos)
+                elif 1000 <= mouse_pos[0] < 1050 and 0 <= mouse_pos[1] < 1000:
+                    toolbar.update(mouse_pos)
+                    if tool_selected[4]:
+                        display.canvas.brush_color = (0,0,0)
+                    elif tool_selected[5]:
+                        display.canvas.brush_color = (0,0,255)
+                    elif tool_selected[6]:
+                        display.canvas.brush_color = (0,255,0)
+                    elif tool_selected[7]:
+                        display.canvas.brush_color = (255,0,0)
+                        
+            elif event.type == py.MOUSEBUTTONUP:
+                pressed = False
+                mouse_pos = py.mouse.get_pos()
+                if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and len(point_buffer) > 0:
+                    point_buffer.append(mouse_pos)
+                    if tool_selected[1]:
+                        display.canvas.draw_circle(point_buffer)
+                    elif tool_selected[2]:
+                        display.canvas.draw_line(point_buffer)
+                    elif tool_selected[3]:
+                        display.canvas.draw_square(point_buffer)
+                    point_buffer = []
+                else:
+                    point_buffer = []
+
+        if pressed:
             mouse_pos = py.mouse.get_pos()
-            pressed = True
-            if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and (tool_selected[1] or tool_selected[2] or tool_selected[3]):
-                point_buffer.append(mouse_pos)
-            elif 1000 <= mouse_pos[0] < 1050 and 0 <= mouse_pos[1] < 1000:
-                toolbar.update(mouse_pos)
-                if tool_selected[4]:
-                    display.canvas.brush_color = (0,0,0)
-                elif tool_selected[5]:
-                    display.canvas.brush_color = (0,0,255)
-                elif tool_selected[6]:
-                    display.canvas.brush_color = (0,255,0)
-                elif tool_selected[7]:
-                    display.canvas.brush_color = (255,0,0)
-                    
-        elif event.type == py.MOUSEBUTTONUP:
-            pressed = False
-            mouse_pos = py.mouse.get_pos()
-            if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and len(point_buffer) > 0:
-                point_buffer.append(mouse_pos)
-                if tool_selected[1]:
-                    display.canvas.draw_circle(point_buffer)
-                elif tool_selected[2]:
-                    display.canvas.draw_line(point_buffer)
-                elif tool_selected[3]:
-                    display.canvas.draw_square(point_buffer)
-                point_buffer = []
-            else:
-                point_buffer = []
+            display.update(mouse_pos)
 
-    if pressed:
-        mouse_pos = py.mouse.get_pos()
-        display.update(mouse_pos)
+        display.draw()
+        toolbar.draw()
 
-    display.draw()
-    toolbar.draw()
+        clock.tick(500)
+        py.display.flip()
 
-    clock.tick(500)
-    py.display.flip()
+    py.quit()
 
-py.quit()
+if __name__ == "__main__":
+    main()
