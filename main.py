@@ -1,6 +1,8 @@
 import pygame as py
-import os
+import os, sys
 import math
+import Client
+import threading
 
 py.init()
 screen = py.display.set_mode((1050,1000))
@@ -12,6 +14,7 @@ assets_dir_on = os.path.join(base_dir, "assets", "on")
 assets_on = [os.path.join(assets_dir_on, file) for file in os.listdir(assets_dir_on)]
 assets_off = [os.path.join(assets_dir_off, file) for file in os.listdir(assets_dir_off)]
 tool_selected = [True]+[False for _ in assets_on][:-1]
+
 
 class Toolbar():
     def __init__(self):
@@ -71,10 +74,13 @@ class Canvas:
         self.surface.fill((255, 255, 255))
         self.brush_color = (0, 0, 0)
 
+    def draw_message(self, color, x, y, size=5):
+        py.draw.circle(self.surface, color, (x, y), size)
+
     def draw_brush(self, x, y, size=5):
         py.draw.circle(self.surface, self.brush_color, (x, y), size)
 
-    def draw_square(self, points):
+    def draw_square(self, points, message_points):
         x1,y1 = points[0]
         x2,y2 = points[1]
 
@@ -84,13 +90,17 @@ class Canvas:
         for x in range(min_x, max_x, 1):
             self.draw_brush(x, y1)
             self.draw_brush(x, y2)
+            message_points.append((x, y1))
+            message_points.append((x, y2))
 
         for y in range(min_y, max_y, 1):
             self.draw_brush(x1, y)
             self.draw_brush(x2, y)
+            message_points.append((x1, y))
+            message_points.append((x2, y))
 
         
-    def draw_circle(self, points):
+    def draw_circle(self, points, message_points):
         x1,y1 = points[0]
         x2,y2 = points[1]
 
@@ -105,12 +115,16 @@ class Canvas:
 
         if min(dx, dy) == dy:
             for t in range(0, int(2*math.pi * 100),1):
-                self.draw_brush(mid_x + smajor * math.cos(t), mid_y + sminor * math.sin(t))
+                x, y = mid_x + smajor * math.cos(t), mid_y + sminor * math.sin(t)
+                self.draw_brush(x, y)
+                message_points.append((int(x),int(y)))
         else:
             for t in range(0, int(2*math.pi * 100),1):
-                self.draw_brush(mid_x + sminor * math.cos(t), mid_y + smajor * math.sin(t))
+                x, y = mid_x + sminor * math.cos(t), mid_y + smajor * math.sin(t)
+                self.draw_brush(x, y)
+                message_points.append((int(x),int(y)))
 
-    def draw_line(self, points):
+    def draw_line(self, points, message_points):
         # Bresenham's Line Algorithm
         x1, y1 = points[0]
         x2, y2 = points[1]
@@ -122,6 +136,7 @@ class Canvas:
         err = dx - dy
 
         while True:
+            message_points.append((x1, y1))
             self.draw_brush(x1, y1)
             if x1 == x2 and y1 == y2:
                 break
@@ -151,24 +166,50 @@ class Display():
     def draw(self):
         self.canvas.render(screen)
 
-    def update(self, mouse_pos):
+    def update(self, mouse_pos, message_points):
         if tool_selected[0] and 0<= mouse_pos[0] < self.size and 0<= mouse_pos[1] < self.size:
+            message_points.append(mouse_pos)
             self.canvas.draw_brush(mouse_pos[0], mouse_pos[1], size=5)
-    
-    def convert(self):
-        print(self.canvas.to_bytes())
-        byte = self.canvas.to_bytes()
-        print(self.canvas.from_bytes(byte))
 
 def main():
     display = Display()
     toolbar = Toolbar()
     running = True
     pressed = False
+
+    message_points = []
     point_buffer = []
+
+    server = "127.0.0.1"
+    portid = 5000
+    port = None
+    sock = None
+
+    try:
+        port = Client.Port()
+        sock = port.connect(server, portid)
+    except Exception as e:
+        print(e)
+        sys.exit(1)
+
+    recv_messages = []
+    lock = threading.Lock()
+
+    recv_thread = threading.Thread(target=Client.receive_messages, args=(sock, recv_messages, lock), daemon=True)
+    recv_thread.start()
 
     while running:
         screen.fill((0,0,0))
+        with lock:
+            if recv_messages:
+                temp = recv_messages[0].split("//")
+                color, message = temp[0], temp[1]
+                color = color.split(",")
+                color = int(color[0]), int(color[1]), int(color[2])
+                points = [point.split(",") for point in message.split("/")[:-1]]
+                [display.canvas.draw_message(color, int(point[0]), int(point[1])) for point in points]
+                recv_messages.clear()
+        
         for event in py.event.get():
             if event.type == py.QUIT:
                 running = False
@@ -194,18 +235,23 @@ def main():
                 if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and len(point_buffer) > 0:
                     point_buffer.append(mouse_pos)
                     if tool_selected[1]:
-                        display.canvas.draw_circle(point_buffer)
+                        display.canvas.draw_circle(point_buffer, message_points)
                     elif tool_selected[2]:
-                        display.canvas.draw_line(point_buffer)
+                        display.canvas.draw_line(point_buffer, message_points)
                     elif tool_selected[3]:
-                        display.canvas.draw_square(point_buffer)
+                        display.canvas.draw_square(point_buffer, message_points)
                     point_buffer = []
                 else:
                     point_buffer = []
 
         if pressed:
             mouse_pos = py.mouse.get_pos()
-            display.update(mouse_pos)
+            display.update(mouse_pos, message_points)
+        else:
+            if message_points:
+                color = display.canvas.brush_color
+                Client.send_message(f"{color[0]},{color[1]},{color[2]}//"+"".join([f"{m[0]},{m[1]}/"for m in set(message_points)]), sock)
+            message_points = []
 
         display.draw()
         toolbar.draw()
