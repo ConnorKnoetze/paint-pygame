@@ -135,6 +135,7 @@ class Colors():
                     self.color_index = i
                     color_selected[i] = True
 
+
 class Canvas:
     def __init__(self, width, height):
         self.surface = py.Surface((width, height))
@@ -241,6 +242,7 @@ class Display():
             message_points.append(mouse_pos)
             self.canvas.draw_brush(mouse_pos[0], mouse_pos[1], size=5)
 
+
 def main():
     display = Display()
     toolbar = Toolbar()
@@ -289,7 +291,7 @@ def main():
             elif event.type == py.MOUSEBUTTONDOWN:
                 mouse_pos = py.mouse.get_pos()
                 pressed = True
-                if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and (tool_selected[1] or tool_selected[2] or tool_selected[3]):
+                if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000:
                     point_buffer.append(mouse_pos)
                 elif 1000 <= mouse_pos[0] < 1050 and 0 <= mouse_pos[1] < toolbar.get_end():
                     toolbar.update(mouse_pos)
