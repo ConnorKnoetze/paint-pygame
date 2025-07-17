@@ -58,14 +58,10 @@ class Toolbar():
                     self.swap(self.tool_index)
                     tool_selected[self.tool_index] = False
                     self.tool_index = None
-                elif self.tool_index == i:
+
                     self.swap(i)
-                    tool_selected[i] = not tool_selected[i]
-                    self.tool_index = None
-                else:    
-                    self.swap(i)
-                    tool_selected[i] = not tool_selected[i]
                     self.tool_index = i
+                    tool_selected[i] = True
 
 
 class Canvas:
@@ -180,7 +176,8 @@ def main():
     message_points = []
     point_buffer = []
 
-    server = "127.0.0.1"
+    server = "127.0.0.1" # change to current device ip address to let all devices on LAN connect
+
     portid = 5000
     port = None
     sock = None
