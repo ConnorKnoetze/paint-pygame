@@ -6,33 +6,44 @@ import threading
 
 py.init()
 screen = py.display.set_mode((1050,1000))
-py.display.set_caption("Paint")
+py.display.set_caption("Paint Pygame")
 clock = py.time.Clock()
 base_dir = os.path.abspath(os.path.dirname(__file__))
-assets_dir_off = os.path.join(base_dir, "assets", "off")
-assets_dir_on = os.path.join(base_dir, "assets", "on")
-assets_on = [os.path.join(assets_dir_on, file) for file in os.listdir(assets_dir_on)]
-assets_off = [os.path.join(assets_dir_off, file) for file in os.listdir(assets_dir_off)]
-tool_selected = [True]+[False for _ in assets_on][:-1]
+
+color_assets_dir_off = os.path.join(base_dir, "assets", "colors","off")
+color_assets_dir_on = os.path.join(base_dir, "assets", "colors", "on")
+color_assets_off = [os.path.join(color_assets_dir_off, file) for file in os.listdir(color_assets_dir_off)]
+color_assets_on = [os.path.join(color_assets_dir_on, file) for file in os.listdir(color_assets_dir_on)]
+color_selected = [True]+[False for _ in color_assets_off][:-1]
+
+tool_assets_dir_off = os.path.join(base_dir, "assets", "tools","off")
+tool_assets_dir_on = os.path.join(base_dir, "assets", "tools", "on")
+tool_assets_off = [os.path.join(tool_assets_dir_off, file) for file in os.listdir(tool_assets_dir_off)]
+tool_assets_on = [os.path.join(tool_assets_dir_on, file) for file in os.listdir(tool_assets_dir_on)]
+tool_selected = [True]+[False for _ in tool_assets_on][:-1]
 
 
 class Toolbar():
     def __init__(self):
         self.swapped = False
-        self.rect = py.Rect(1000, 0, 50, 1000)
+        self.rect = py.Rect(1000, 0, 50, 41 * len(tool_assets_off))
         self.tool_index = 0
 
         gap = 41
         size = 32
         start = 1009
+        self.end = len(tool_assets_off)*gap
 
-        self.assets_rects = [py.Rect(start, y, size, size) for y in range(9, len(assets_off)*gap, gap)] 
-        self.images = [py.transform.scale(py.image.load(filepath).convert_alpha(), (size, size)) for filepath in assets_off]
+        self.assets_rects = [py.Rect(start, y, size, size) for y in range(9, self.end, gap)] 
+        self.images = [py.transform.scale(py.image.load(filepath).convert_alpha(), (size, size)) for filepath in tool_assets_off]
         self.swap(0)
     
     def draw(self):
         py.draw.rect(screen, (100,100,100), self.rect)
         [screen.blit(self.images[i], self.assets_rects[i]) for i in range(len(self.assets_rects))]
+
+    def get_end(self):
+        return self.end
 
     def get_rect(self):
         return self.rect
@@ -42,9 +53,9 @@ class Toolbar():
 
     def swap(self, index):
         if self.swapped:
-            path = os.path.join(base_dir, assets_off[index])
+            path = os.path.join(base_dir, tool_assets_off[index])
         else:
-            path = os.path.join(base_dir, assets_on[index])
+            path = os.path.join(base_dir, tool_assets_on[index])
         
         self.images[index] = py.transform.scale(py.image.load(path).convert_alpha(), (32,32))
         self.swapped = not self.swapped
@@ -64,6 +75,66 @@ class Toolbar():
                     tool_selected[i] = True
 
 
+class Colors():
+    def __init__(self):
+        black = (0, 0, 0)
+        blue = (0, 0, 255)
+        green = (0, 255, 0)
+        red = (255, 0, 0)
+
+        self.colors = [black, blue, green, red]
+
+        gap = 41
+        size = 32
+        xstart = 1009
+        ystart = 41*len(color_assets_off)
+        image_start = ystart + 9
+        self.end = image_start+ len(color_assets_off)*gap
+
+        self.swapped = False
+        self.rect = py.Rect(1000, ystart, 50, 41 * len(color_assets_off))
+        self.color_index = 0
+
+        self.assets_rects = [py.Rect(xstart, y, size, size) for y in range(image_start, self.end, gap)] 
+        self.images = [py.transform.scale(py.image.load(filepath).convert_alpha(), (size, size)) for filepath in color_assets_off]
+        self.swap(0)
+
+    def get_end(self):
+        return self.end
+    
+    def get_color(self):
+        return self.colors[self.color_index]
+
+    def draw(self):
+        py.draw.rect(screen, (100,100,100), self.rect)
+        [screen.blit(self.images[i], self.assets_rects[i]) for i in range(len(self.assets_rects))]
+
+    def get_rects(self):
+        return self.assets_rects
+
+    def swap(self, index):
+        if self.swapped:
+            path = os.path.join(base_dir, color_assets_off[index])
+        else:
+            path = os.path.join(base_dir, color_assets_on[index])
+        
+        self.images[index] = py.transform.scale(py.image.load(path).convert_alpha(), (32,32))
+        self.swapped = not self.swapped
+
+    def update(self, mouse_pos):
+        rects = self.get_rects()
+        for i in range(len(rects)):
+            rect = rects[i]
+            if rect.collidepoint(mouse_pos):
+                if self.color_index != None and self.color_index != i:
+                    self.swap(self.color_index)
+                    color_selected[self.color_index] = False
+                    self.color_index = None
+
+                    self.swap(i)
+                    self.color_index = i
+                    color_selected[i] = True
+
 class Canvas:
     def __init__(self, width, height):
         self.surface = py.Surface((width, height))
@@ -75,6 +146,9 @@ class Canvas:
 
     def draw_brush(self, x, y, size=5):
         py.draw.circle(self.surface, self.brush_color, (x, y), size)
+
+    def assign_color(self, color):
+        self.brush_color = color
 
     def draw_square(self, points, message_points):
         x1,y1 = points[0]
@@ -170,6 +244,8 @@ class Display():
 def main():
     display = Display()
     toolbar = Toolbar()
+    colors = Colors()
+
     running = True
     pressed = False
 
@@ -196,7 +272,7 @@ def main():
     recv_thread.start()
 
     while running:
-        screen.fill((0,0,0))
+        screen.fill((100,100,100))
         with lock:
             if recv_messages:
                 temp = recv_messages[0].split("//")
@@ -215,16 +291,11 @@ def main():
                 pressed = True
                 if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and (tool_selected[1] or tool_selected[2] or tool_selected[3]):
                     point_buffer.append(mouse_pos)
-                elif 1000 <= mouse_pos[0] < 1050 and 0 <= mouse_pos[1] < 1000:
+                elif 1000 <= mouse_pos[0] < 1050 and 0 <= mouse_pos[1] < toolbar.get_end():
                     toolbar.update(mouse_pos)
-                    if tool_selected[4]:
-                        display.canvas.brush_color = (0,0,0)
-                    elif tool_selected[5]:
-                        display.canvas.brush_color = (0,0,255)
-                    elif tool_selected[6]:
-                        display.canvas.brush_color = (0,255,0)
-                    elif tool_selected[7]:
-                        display.canvas.brush_color = (255,0,0)
+                elif 1000 <= mouse_pos[0] < 1050 and toolbar.get_end() <= mouse_pos[1] < colors.get_end():
+                    colors.update(mouse_pos)
+                    display.canvas.assign_color(colors.get_color())
                         
             elif event.type == py.MOUSEBUTTONUP:
                 pressed = False
@@ -252,6 +323,7 @@ def main():
 
         display.draw()
         toolbar.draw()
+        colors.draw()
 
         clock.tick(500)
         py.display.flip()
