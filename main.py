@@ -348,7 +348,10 @@ def main():
                 points = [point.split(",") for point in message.split("/")[:-1]]
                 tool = int(tool)
                 if tool == 0:
-                    [display.canvas.draw_message(color, int(point[0]), int(point[1]), size=int(size)) for point in points]
+                    [display.canvas.draw_brush(int(point[0]), int(point[1]), color, size=int(size)) for point in points]
+                    for i in range(1, len(points),1):
+                        p1, p2 = points[i-1], points[i]
+                        display.canvas.draw_line(((int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1]))), color, size)
                 elif tool == 1:
                     p1, p2 = points
                     display.canvas.draw_circle(((int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1]))), color, size)
@@ -408,7 +411,7 @@ def main():
             if message_points:
                 color = display.canvas.brush_color
                 tool = get_tool(tool_selected)
-                Client.send_message(f"{tool}//" + f"{sizes.get_size()}//" + f"{color[0]},{color[1]},{color[2]}//"+"".join([f"{m[0]},{m[1]}/"for m in set(message_points)]), sock)
+                Client.send_message(f"{tool}//" + f"{sizes.get_size()}//" + f"{color[0]},{color[1]},{color[2]}//"+"".join([f"{m[0]},{m[1]}/"for m in message_points]), sock)
             message_points = []
 
         display.draw()
