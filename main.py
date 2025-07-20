@@ -203,11 +203,12 @@ class Canvas:
         self.brush_color = (0, 0, 0)
         self.size = 5
 
-    def draw_message(self, color, x, y, size=5):
+    def draw_brush(self, x, y, color=None, size=None):
+        if not color:
+            color = self.brush_color
+        if not size:
+            size = self.size
         py.draw.circle(self.surface, color, (x, y), size)
-
-    def draw_brush(self, x, y):
-        py.draw.circle(self.surface, self.brush_color, (x, y), self.size)
 
     def assign_color(self, color):
         self.brush_color = color
@@ -215,7 +216,7 @@ class Canvas:
     def assign_size(self, size):
         self.size = size
 
-    def draw_square(self, points, message_points):
+    def draw_square(self, points, color=None, size=None):
         x1,y1 = points[0]
         x2,y2 = points[1]
 
@@ -223,19 +224,15 @@ class Canvas:
         min_y, max_y = min(y1, y2), max(y1, y2)
         
         for x in range(min_x, max_x, 1):
-            self.draw_brush(x, y1)
-            self.draw_brush(x, y2)
-            message_points.append((x, y1))
-            message_points.append((x, y2))
+            self.draw_brush(x, y1, color, size)
+            self.draw_brush(x, y2, color, size)
+
 
         for y in range(min_y, max_y, 1):
-            self.draw_brush(x1, y)
-            self.draw_brush(x2, y)
-            message_points.append((x1, y))
-            message_points.append((x2, y))
-
-        
-    def draw_circle(self, points, message_points):
+            self.draw_brush(x1, y, color, size)
+            self.draw_brush(x2, y, color, size)
+   
+    def draw_circle(self, points, color=None, size=None):
         x1,y1 = points[0]
         x2,y2 = points[1]
 
@@ -251,15 +248,13 @@ class Canvas:
         if min(dx, dy) == dy:
             for t in range(0, int(2*math.pi * 100),1):
                 x, y = mid_x + smajor * math.cos(t), mid_y + sminor * math.sin(t)
-                self.draw_brush(x, y)
-                message_points.append((int(x),int(y)))
+                self.draw_brush(x, y, color, size)
         else:
             for t in range(0, int(2*math.pi * 100),1):
                 x, y = mid_x + sminor * math.cos(t), mid_y + smajor * math.sin(t)
-                self.draw_brush(x, y)
-                message_points.append((int(x),int(y)))
+                self.draw_brush(x, y, color, size)
 
-    def draw_line(self, points, message_points):
+    def draw_line(self, points, color=None, size=None):
         # Bresenham's Line Algorithm
         x1, y1 = points[0]
         x2, y2 = points[1]
@@ -271,8 +266,7 @@ class Canvas:
         err = dx - dy
 
         while True:
-            message_points.append((x1, y1))
-            self.draw_brush(x1, y1)
+            self.draw_brush(x1, y1, color, size)
             if x1 == x2 and y1 == y2:
                 break
             e2 = err * 2
@@ -308,6 +302,11 @@ class Display():
 
 
 def main():
+    def get_tool(tools):
+        for i, tool in enumerate(tools):
+            if tool:
+                return i
+
     display = Display()
     toolbar = Toolbar()
     colors = Colors()
@@ -343,11 +342,22 @@ def main():
         with lock:
             if recv_messages:
                 temp = recv_messages[0].split("//")
-                size, color, message = temp[0], temp[1], temp[2]
+                tool, size, color, message = temp[0], int(temp[1]), temp[2], temp[3]
                 color = color.split(",")
                 color = int(color[0]), int(color[1]), int(color[2])
                 points = [point.split(",") for point in message.split("/")[:-1]]
-                [display.canvas.draw_message(color, int(point[0]), int(point[1]), size=int(size)) for point in points]
+                tool = int(tool)
+                if tool == 0:
+                    [display.canvas.draw_message(color, int(point[0]), int(point[1]), size=int(size)) for point in points]
+                elif tool == 1:
+                    p1, p2 = points
+                    display.canvas.draw_circle(((int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1]))), color, size)
+                elif tool == 2:
+                    p1, p2 = points
+                    display.canvas.draw_line(((int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1]))), color, size)
+                elif tool == 3:
+                    p1, p2 = points
+                    display.canvas.draw_square(((int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1]))), color, size)
                 recv_messages.clear()
         
         for event in py.event.get():
@@ -373,22 +383,32 @@ def main():
                 if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and len(point_buffer) > 0:
                     point_buffer.append(mouse_pos)
                     if tool_selected[1]:
-                        display.canvas.draw_circle(point_buffer, message_points)
+                        display.canvas.draw_circle(point_buffer)
+                        message_points = point_buffer
                     elif tool_selected[2]:
-                        display.canvas.draw_line(point_buffer, message_points)
+                        display.canvas.draw_line(point_buffer)
+                        message_points = point_buffer
                     elif tool_selected[3]:
-                        display.canvas.draw_square(point_buffer, message_points)
+                        display.canvas.draw_square(point_buffer)
+                        message_points = point_buffer
                     point_buffer = []
                 else:
                     point_buffer = []
 
         if pressed:
             mouse_pos = py.mouse.get_pos()
-            display.update(mouse_pos, message_points)
+            if len(point_buffer) < 2 and tool_selected[0]:
+                point_buffer.append(mouse_pos)
+            else:
+                if 0 <= mouse_pos[0] < 1000 and 0 <= mouse_pos[1] < 1000 and tool_selected[0]:
+                    display.canvas.draw_line(point_buffer)
+                    point_buffer = point_buffer[1:]
+                    message_points.append(point_buffer[0])
         else:
             if message_points:
                 color = display.canvas.brush_color
-                Client.send_message(f"{sizes.get_size()}//"+f"{color[0]},{color[1]},{color[2]}//"+"".join([f"{m[0]},{m[1]}/"for m in set(message_points)]), sock)
+                tool = get_tool(tool_selected)
+                Client.send_message(f"{tool}//" + f"{sizes.get_size()}//" + f"{color[0]},{color[1]},{color[2]}//"+"".join([f"{m[0]},{m[1]}/"for m in set(message_points)]), sock)
             message_points = []
 
         display.draw()
