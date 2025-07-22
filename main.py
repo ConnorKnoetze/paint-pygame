@@ -348,7 +348,6 @@ def main():
                 points = [point.split(",") for point in message.split("/")[:-1]]
                 tool = int(tool)
                 if tool == 0:
-                    [display.canvas.draw_brush(int(point[0]), int(point[1]), color, size=int(size)) for point in points]
                     for i in range(1, len(points),1):
                         p1, p2 = points[i-1], points[i]
                         display.canvas.draw_line(((int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1]))), color, size)
